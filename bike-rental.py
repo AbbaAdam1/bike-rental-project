@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Load the corrupted dataset (734 rows: 731 original + 3 duplicates) from 'day_corrupted.csv'
-df = pd.read_csv('day_corrupted.csv')
+df = pd.read_csv('day.csv')
 # Dataset loaded with corruptions: 5 NaNs in temp/hum, 5 NaNs + 5 None in windspeed, strings ("high", "32°C", etc.), outliers (1000, -100), duplicates, shuffled rows
 
 # Print initial state to inspect rows, columns, duplicates, and missing values
@@ -136,12 +136,14 @@ plt.tight_layout()
 plt.savefig('correlation_heatmap.png')
 plt.show()
 # Note: Includes all listed predictors and cnt; excludes instant, casual, registered
+#df['temp_celsius'] = df['temp'] * 41  # Convert normalized to actual Celsius
+#df['temp_f'] = (df['temp_celsius'] * 9/5) + 32  # Convert to Fahrenheit
 
 # 2. Scatter Plot: cnt vs. temp by season
 plt.figure(figsize=(8, 6))
 sns.scatterplot(x='temp', y='cnt', hue='season', size='hum', data=df)
 plt.title('Bike Rentals vs. Temperature by Season')
-plt.xlabel('Normalized Temperature')
+plt.xlabel('Temperature in Fahrenheit')
 plt.ylabel('Rental Count')
 plt.tight_layout()
 plt.savefig('rentals_vs_temp.png')
@@ -169,7 +171,7 @@ plt.tight_layout()
 plt.savefig('rentals_by_weather.png')
 plt.show()
 # Plots only weathersit and cnt
-
+'''
 # 5. Line Plot: cnt vs. weekday (using is_weekend for clarity)
 plt.figure(figsize=(8, 6))
 sns.lineplot(x='weekday', y='cnt', hue='is_weekend', data=df)
@@ -179,6 +181,7 @@ plt.ylabel('Rental Count')
 plt.tight_layout()
 plt.savefig('rentals_by_weekday.png')
 plt.show()
+'''
 # Plots only weekday, cnt, and is_weekend
 # Print final state to confirm cleaning
 print("\nAfter Cleaning:")
