@@ -19,8 +19,8 @@ def corrupt_data(input_path='day.csv', output_path='day_corrupted.csv'):
     df.loc[string_injection_indices[2:], 'hum'] = 'low'
 
     # 3. Outliers
-    outlier_indices = np.random.choice(df.index, size=5, replace=False)
-    df.loc[outlier_indices, 'temp'] = [1000, -100, 200, 300, 999]
+    #outlier_indices = np.random.choice(df.index, size=5, replace=False)
+    #df.loc[outlier_indices, 'temp'] = [1000, -100, 200, 300, 999]
 
     # 4. Bad formatting
     bad_format_indices = np.random.choice(df.index, size=5, replace=False)
