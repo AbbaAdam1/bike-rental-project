@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Load the corrupted dataset (734 rows: 731 original + 3 duplicates) from 'day_corrupted.csv'
-df = pd.read_csv('day.csv')
+df = pd.read_csv('day_corrupted.csv')
 # Dataset loaded with corruptions: 5 NaNs in temp/hum, 5 NaNs + 5 None in windspeed, strings ("high", "32°C", etc.), outliers (1000, -100), duplicates, shuffled rows
 
 # Print initial state to inspect rows, columns, duplicates, and missing values
@@ -32,7 +32,7 @@ else:
     print("No column name changes needed.")
 # Ensures columns match UCI dataset (e.g., 'total_count' → 'cnt')
 
-# Remove 3 duplicate rows to restore 731 unique records
+# Remove duplicate rows
 initial_rows = len(df)
 df = df.drop_duplicates()
 duplicates_removed = initial_rows - len(df)
@@ -90,13 +90,15 @@ for col in categorical_cols:
             print(f"Filled {missing_before} missing values in {col} with mode.")
 # Ensures no missing values in categorical columns (likely none in your dataset)
 
-# Clip outliers in normalized columns (temp, atemp, hum) to [0, 1] and cnt to [0, 10000]
+# Drop invalid rows in normalized columns (temp, atemp, hum)
 for col in ['temp', 'atemp', 'hum']:
     if col in df:
-        outliers_before = ((df[col] < 0) | (df[col] > 1)).sum()
-        df[col] = df[col].clip(0, 1)
-        if outliers_before > 0:
-            print(f"Clipped {outliers_before} outliers in {col} to range [0, 1].")
+        invalid_rows = ((df[col] < 0) | (df[col] > 1)).sum()
+        if invalid_rows > 0:
+            df = df[(df[col] >= 0) & (df[col] <= 1)]
+            print(f"Dropped {invalid_rows} invalid rows in {col} outside [0, 1].")
+
+# Clip outliers in cnt only (valid range 0–10000)
 if 'cnt' in df:
     outliers_before = ((df['cnt'] < 0) | (df['cnt'] > 10000)).sum()
     df['cnt'] = df['cnt'].clip(0, 10000)
@@ -124,31 +126,60 @@ df['is_weekend'] = df['weekday'].isin([0, 6]).astype(int)
 # Create interaction feature for temperature and humidity
 df['temp_hum_interaction'] = df['temp'] * df['hum']
 
-# 1. Correlation Heatmap (all numeric columns, but focus on predictors)
-predictors = ['season', 'yr', 'mnth', 'holiday', 'weekday', 'workingday', 'weathersit',
-              'temp', 'atemp', 'hum', 'windspeed', 'is_weekend']
-corr_matrix = df[predictors + ['cnt']].corr()
-plt.figure(figsize=(10, 8))
-sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt='.2f',
-            annot_kws={"size": 10})
-plt.title('Correlation of Key Features with Bike Rentals')
+# 1. Focused Correlation with Target Variable
+# Select only key variables that support your weather story
+key_features = ['temp', 'hum', 'windspeed', 'weathersit', 'season', 'is_weekend', 'cnt']
+corr_with_target = df[key_features].corr()['cnt'].drop('cnt').sort_values(key=abs, ascending=False)
+
+plt.figure(figsize=(8, 6))
+colors = ['darkred' if x > 0 else 'darkblue' for x in corr_with_target.values]
+bars = plt.barh(range(len(corr_with_target)), corr_with_target.values, color=colors, alpha=0.7)
+
+# Add correlation values on bars
+for i, (bar, val) in enumerate(zip(bars, corr_with_target.values)):
+    plt.text(val + 0.01 if val > 0 else val - 0.01, i, f'{val:.2f}',
+             va='center', ha='left' if val > 0 else 'right', fontweight='bold')
+
+plt.yticks(range(len(corr_with_target)), corr_with_target.index)
+plt.xlabel('Correlation with Bike Rentals')
+plt.title('Key Feature Correlations with Daily Bike Rentals')
+plt.axvline(x=0, color='black', linestyle='-', alpha=0.3)
 plt.tight_layout()
-plt.savefig('correlation_heatmap.png')
+plt.savefig('correlation_focused.png', dpi=300, bbox_inches='tight')
 plt.show()
 # Note: Includes all listed predictors and cnt; excludes instant, casual, registered
 #df['temp_celsius'] = df['temp'] * 41  # Convert normalized to actual Celsius
 #df['temp_f'] = (df['temp_celsius'] * 9/5) + 32  # Convert to Fahrenheit
 
-# 2. Scatter Plot: cnt vs. temp by season
-plt.figure(figsize=(8, 6))
-sns.scatterplot(x='temp', y='cnt', hue='season', size='hum', data=df)
-plt.title('Bike Rentals vs. Temperature by Season')
-plt.xlabel('Temperature in Fahrenheit')
-plt.ylabel('Rental Count')
+# 2. Scatter Plot: cnt vs. temp by season (focused on Goldilocks Zone)
+plt.figure(figsize=(10, 6))
+
+# Create the scatter plot with just season coloring
+sns.scatterplot(x='temp', y='cnt', hue='season', data=df, alpha=0.7, s=60)
+
+# Add vertical lines to highlight the Goldilocks Zone (0.5-0.7)
+plt.axvline(x=0.5, color='red', linestyle='--', alpha=0.8, linewidth=2, label='Optimal Zone')
+plt.axvline(x=0.7, color='red', linestyle='--', alpha=0.8, linewidth=2)
+
+# Add shaded region for Goldilocks Zone
+plt.axvspan(0.5, 0.7, alpha=0.2, color='green', label='Goldilocks Zone')
+
+# Customize the plot
+plt.title('Bike Rentals vs. Temperature by Season\n(Optimal Zone: 0.5-0.7 Normalized Temp)', fontsize=14)
+plt.xlabel('Normalized Temperature (0-1 scale)', fontsize=12)
+plt.ylabel('Daily Rental Count', fontsize=12)
+
+# Improve legend
+season_labels = ['Winter', 'Spring', 'Summer', 'Fall']
+handles, labels = plt.gca().get_legend_handles_labels()
+# Update season labels in legend
+for i, label in enumerate(labels[:4]):  # First 4 are seasons
+    labels[i] = season_labels[int(label)-1]
+plt.legend(handles, labels, title='Season', bbox_to_anchor=(1.05, 1), loc='upper left')
+
 plt.tight_layout()
-plt.savefig('rentals_vs_temp.png')
+plt.savefig('rentals_vs_temp.png', dpi=300, bbox_inches='tight')
 plt.show()
-# Plots only temp, cnt, season, and hum (size); no other columns
 
 # 3. Boxplot: cnt by season
 plt.figure(figsize=(8, 6))
@@ -171,17 +202,8 @@ plt.tight_layout()
 plt.savefig('rentals_by_weather.png')
 plt.show()
 # Plots only weathersit and cnt
-'''
-# 5. Line Plot: cnt vs. weekday (using is_weekend for clarity)
-plt.figure(figsize=(8, 6))
-sns.lineplot(x='weekday', y='cnt', hue='is_weekend', data=df)
-plt.title('Bike Rentals by Weekday (Hue: Weekend vs Weekday)')
-plt.xlabel('Weekday (0=Sun, 6=Sat)')
-plt.ylabel('Rental Count')
-plt.tight_layout()
-plt.savefig('rentals_by_weekday.png')
-plt.show()
-'''
+
+
 # Plots only weekday, cnt, and is_weekend
 # Print final state to confirm cleaning
 print("\nAfter Cleaning:")
@@ -197,4 +219,3 @@ print(f"Last 5 instant: {df['instant'].tail().tolist()}")
 # Save cleaned dataset for EDA and modeling
 df.to_csv('day_cleaned.csv', index=False)
 print("✅ Data cleaned and saved as 'day_cleaned.csv'")
-# Dataset ready for Bike Rental Prediction Project
