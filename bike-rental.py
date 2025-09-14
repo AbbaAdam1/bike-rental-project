@@ -38,7 +38,6 @@ df = df.drop_duplicates()
 duplicates_removed = initial_rows - len(df)
 if duplicates_removed > 0:
     print(f"Removed {duplicates_removed} duplicate rows.")
-# Reduces rows from 734 to 731
 
 # Fix non-sequential instant by sorting by dteday and resetting to 1–731
 if not df['instant'].is_monotonic_increasing:
@@ -104,7 +103,6 @@ if 'cnt' in df:
     df['cnt'] = df['cnt'].clip(0, 10000)
     if outliers_before > 0:
         print(f"Clipped {outliers_before} outliers in cnt to range [0, 10000].")
-# Clips 5 outliers in temp (1000, -100, 200, 300, 999); likely 0 in hum/cnt
 
 # Ensure categorical columns are integers
 for col in ['season', 'yr', 'mnth', 'holiday', 'weekday', 'workingday', 'weathersit']:
@@ -147,9 +145,6 @@ plt.axvline(x=0, color='black', linestyle='-', alpha=0.3)
 plt.tight_layout()
 plt.savefig('correlation_focused.png', dpi=300, bbox_inches='tight')
 plt.show()
-# Note: Includes all listed predictors and cnt; excludes instant, casual, registered
-#df['temp_celsius'] = df['temp'] * 41  # Convert normalized to actual Celsius
-#df['temp_f'] = (df['temp_celsius'] * 9/5) + 32  # Convert to Fahrenheit
 
 # 2. Scatter Plot: cnt vs. temp by season (focused on Goldilocks Zone)
 plt.figure(figsize=(10, 6))
