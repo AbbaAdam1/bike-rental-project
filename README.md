@@ -32,7 +32,7 @@ A detailed walkthrough of the analysis and recommendations is available here:
 ---
 
 ## How to Reproduce
-1. Clone this repository:
+   Clone this repository:
    ```bash
    git clone https://github.com/AbbaAdam1/bike-rental-project
    cd bike-rental-project
