@@ -28,7 +28,7 @@ This demonstrates both:
 ---
 
 ## Presentation
-A detailed walkthrough of the analysis and recommendations is available here:  
+A detailed walkthrough of the analysis and recommendations as well as the graphs produced by my code is available here:  
 👉 [Optimizing Bike Share Operations Through Data Analytics (PPT)](presentation/bike_share_analysis.pptx)
 
 
