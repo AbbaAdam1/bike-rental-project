@@ -16,22 +16,23 @@ Using the [UCI Bike Sharing Dataset](https://archive.ics.uci.edu/ml/datasets/bik
 
 ---
 
-## 🛠️ Tools & Libraries
+## Tools & Libraries
 - **Python** (pandas, numpy, matplotlib, seaborn)
 - **PowerPoint** for communicating findings
 
 ---
 
-## 🔑 Key Findings
-- Bike rentals peak in **moderate temperatures** (normalized temp ~0.5–0.7).
-- **Seasonality matters**: Summer and Fall show higher demand compared to Winter.
-- **Adverse weather** (rainy/misty conditions) significantly reduces rentals.
-- Weekends have distinct usage patterns compared to weekdays.
-
----
-
-## 🎤 Presentation
+## Presentation
 A detailed walkthrough of the analysis and recommendations is available here:  
 👉 [Optimizing Bike Share Operations Through Data Analytics (PPT)](presentation/bike_share_analysis.pptx)
 
+
 *(PDF version available for easy viewing: [link](presentation/bike_share_analysis.pdf))* 
+
+---
+
+## How to Reproduce
+   Clone this repository:
+   ```bash
+   git clone https://github.com/AbbaAdam1/bike-rental-project
+   cd bike-rental-project
