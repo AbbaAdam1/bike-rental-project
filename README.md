@@ -27,4 +27,12 @@ A detailed walkthrough of the analysis and recommendations is available here:
 👉 [Optimizing Bike Share Operations Through Data Analytics (PPT)](presentation/bike_share_analysis.pptx)
 
 
-*(PDF version available for easy viewing: [link](presentation/bike_share_analysis.pptx))* 
+*(PDF version available for easy viewing: [link](presentation/bike_share_analysis.pdf))* 
+
+---
+
+## How to Reproduce
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/AbbaAdam1/bike-rental-project
+   cd bike-rental-project
