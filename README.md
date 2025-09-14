@@ -24,6 +24,7 @@ Using the [UCI Bike Sharing Dataset](https://archive.ics.uci.edu/ml/datasets/bik
 
 ## Presentation
 A detailed walkthrough of the analysis and recommendations is available here:  
-👉 [Optimizing Bike Share Operations Through Data Analytics (PPT)](presentation/Data-Driven Decisions for Bike Fleet Management.pptx)
+👉 [Optimizing Bike Share Operations Through Data Analytics (PPT)](presentation/bike_share_analysis.pptx)
 
-*(PDF version available for easy viewing: [link](presentation/Data-Driven Decisions for Bike Fleet Management.pptx))* 
+
+*(PDF version available for easy viewing: [link](presentation/bike_share_analysis.pptx))* 
