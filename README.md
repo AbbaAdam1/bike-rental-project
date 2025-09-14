@@ -16,9 +16,14 @@ Using the [UCI Bike Sharing Dataset](https://archive.ics.uci.edu/ml/datasets/bik
 
 ---
 
-## Tools & Libraries
-- **Python** (pandas, numpy, matplotlib, seaborn)
-- **PowerPoint** for communicating findings
+## Data Cleaning
+
+Real-world datasets are often messy. To simulate this, I introduced errors such as missing values, duplicates, and inconsistent formats using a small helper script (`script/produce-file.py`).  
+These were then cleaned and validated in the main analysis script.
+
+This demonstrates both:
+- Identifying and fixing data quality issues
+- Ensuring the analysis pipeline is robust
 
 ---
 
@@ -27,12 +32,18 @@ A detailed walkthrough of the analysis and recommendations is available here:
 👉 [Optimizing Bike Share Operations Through Data Analytics (PPT)](presentation/bike_share_analysis.pptx)
 
 
-*(PDF version available for easy viewing: [link](presentation/bike_share_analysis.pdf))* 
+*(PDF version available for easy viewing: [link](presentation/bike_share_analysis.pdf))*
+
+---
+
+## Tools & Libraries
+- **Python** (pandas, numpy, matplotlib, seaborn)
+- **PowerPoint** for communicating findings
 
 ---
 
 ## How to Reproduce
-   Clone this repository:
+1. Clone this repository:
    ```bash
    git clone https://github.com/AbbaAdam1/bike-rental-project
    cd bike-rental-project

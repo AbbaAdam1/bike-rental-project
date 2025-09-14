@@ -3,7 +3,7 @@ import numpy as np
 import random
 
 
-def corrupt_data(input_path='day.csv', output_path='day_corrupted.csv'):
+def corrupt_data(input_path='day.csv', output_path='../day_corrupted.csv'):
     df = pd.read_csv(input_path)
 
     num_rows = len(df)
