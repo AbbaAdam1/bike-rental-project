@@ -1,49 +1,57 @@
 # Optimizing Bike Share Operations Through Data Analytics
 
-This project explores how weather, seasonality, and demand patterns impact daily bike rentals.  
-Using the [UCI Bike Sharing Dataset](https://archive.ics.uci.edu/ml/datasets/bike+sharing+dataset), I applied data cleaning, exploratory data analysis (EDA), and visualization to uncover insights that can guide operational decision-making for bike share programs.
+This project explores how weather, seasonality, and demand patterns impact daily bike rentals.
+Using the [UCI Bike Sharing Dataset](https://archive.ics.uci.edu/ml/datasets/bike+sharing+dataset), the workflow covers data corruption simulation, cleaning, feature engineering, and visualization to support bike-share operational decisions.
 
----
+## Project Overview
+- Goal: Identify factors that influence bike rentals and define optimal conditions for operations.
+- Dataset: UCI Bike Sharing Dataset (daily records with weather, season, and rental counts).
+- Workflow:
+1. Corrupt clean source data in controlled ways (missing values, formatting noise, duplicates).
+2. Clean and validate corrupted records with a repeatable pipeline.
+3. Engineer useful features (weekend indicator, temperature-humidity interaction).
+4. Generate visual outputs for insight communication.
 
-# Project Overview
-- **Goal:** Identify factors that influence bike rentals and define optimal conditions for operations.
-- **Dataset:** UCI Bike Sharing Dataset (daily records: weather, season, and rental counts).
-- **Key Steps:**
-	1. Clean corrupted dataset (duplicates, NaNs, outliers, invalid strings).
-	2. Explore relationships between features (temperature, humidity, weather situation).
-	3. Visualize findings with Python (matplotlib, seaborn).
-	4. Highlight operational insights (e.g., "Goldilocks zone" for temperature).
-
----
-
-## Data Cleaning
-
-Real-world datasets are often messy. To simulate this, I introduced errors such as missing values, duplicates, and inconsistent formats using a small helper script (`script/produce-file.py`).  
-These were then cleaned and validated in the main analysis script.
-
-This demonstrates both:
-- Identifying and fixing data quality issues
-- Ensuring the analysis pipeline is robust
-
----
+## Project Structure
+- `script/produce-file.py`: Generates `day_corrupted.csv` from `day.csv` deterministically.
+- `src/bike_rental_pipeline.py`: Core pipeline (cleaning, feature engineering, plotting).
+- `bike-rental.py`: Thin entrypoint that runs the pipeline.
+- `images/`: Saved figures.
+- `tests/test_pipeline.py`: Unit tests for core cleaning/feature logic.
 
 ## Presentation
-A detailed walkthrough of the analysis and recommendations as well as the graphs produced by my code is available here:  
-👉 [Optimizing Bike Share Operations Through Data Analytics (PPT)](presentation/bike_share_analysis.pptx)
+- PPT: `presentation/bike_share_analysis.pptx`
+- PDF: `presentation/bike_share_analysis.pdf`
 
+## Requirements
+- Python 3.10+
+- Packages listed in `requirements.txt`
 
-*(PDF version available for easy viewing: [link](presentation/bike_share_analysis.pdf))*
+Install dependencies:
 
----
-
-## Tools & Libraries
-- **Python** (pandas, numpy, matplotlib, seaborn)
-- **PowerPoint** for communicating findings
-
----
+```bash
+pip install -r requirements.txt
+```
 
 ## How to Reproduce
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/AbbaAdam1/bike-rental-project
-   cd bike-rental-project
+1. Generate a corrupted dataset from the clean source:
+
+```bash
+python script/produce-file.py
+```
+
+2. Run the cleaning and analysis pipeline:
+
+```bash
+python bike-rental.py
+```
+
+Outputs:
+- Cleaned dataset: `day_cleaned.csv`
+- Figures: `images/correlation_focused.png`, `images/rentals_vs_temp.png`, `images/rentals_by_season.png`, `images/rentals_by_weather.png`
+
+## Run Tests
+
+```bash
+python -m unittest discover -s tests -p "test_*.py"
+```

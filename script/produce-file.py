@@ -1,20 +1,36 @@
 import pandas as pd
 import numpy as np
 import random
+from pathlib import Path
 
 
-def corrupt_data(input_path='day.csv', output_path='../day_corrupted.csv'):
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
+def corrupt_data(input_path=None, output_path=None, seed=42):
+    if input_path is None:
+        input_path = PROJECT_ROOT / "day.csv"
+    else:
+        input_path = Path(input_path)
+
+    if output_path is None:
+        output_path = PROJECT_ROOT / "day_corrupted.csv"
+    else:
+        output_path = Path(output_path)
+
+    rng = np.random.default_rng(seed)
+    random.seed(seed)
     df = pd.read_csv(input_path)
 
     num_rows = len(df)
 
     # 1. Random missing values
     for col in ['temp', 'hum', 'windspeed']:
-        missing_indices = np.random.choice(df.index, size=5, replace=False)
+        missing_indices = rng.choice(df.index, size=5, replace=False)
         df.loc[missing_indices, col] = np.nan
 
     # 2. String injection in numeric fields
-    string_injection_indices = np.random.choice(df.index, size=5, replace=False)
+    string_injection_indices = rng.choice(df.index, size=5, replace=False)
     df.loc[string_injection_indices[:2], 'cnt'] = 'high'
     df.loc[string_injection_indices[2:], 'hum'] = 'low'
 
@@ -23,13 +39,13 @@ def corrupt_data(input_path='day.csv', output_path='../day_corrupted.csv'):
     #df.loc[outlier_indices, 'temp'] = [1000, -100, 200, 300, 999]
 
     # 4. Bad formatting
-    bad_format_indices = np.random.choice(df.index, size=5, replace=False)
+    bad_format_indices = rng.choice(df.index, size=5, replace=False)
     df.loc[bad_format_indices[:2], 'temp'] = ['32°C', '27C']
     df.loc[bad_format_indices[2:4], 'hum'] = ['50%', '75%']
     df.loc[bad_format_indices[4:], 'windspeed'] = ['10km/h']
 
     # 5. Drop windspeed for some rows
-    drop_indices = np.random.choice(df.index, size=5, replace=False)
+    drop_indices = rng.choice(df.index, size=5, replace=False)
     df.loc[drop_indices, 'windspeed'] = None
 
     # 6. Duplicated rows
@@ -41,7 +57,7 @@ def corrupt_data(input_path='day.csv', output_path='../day_corrupted.csv'):
 
     # Save the corrupted dataset
     df.to_csv(output_path, index=False)
-    print(f"[✓] Corrupted dataset saved to '{output_path}'")
+    print(f"[OK] Corrupted dataset saved to '{output_path}'")
 
 
 if __name__ == "__main__":
