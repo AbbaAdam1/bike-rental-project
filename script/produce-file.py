@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-import random
 from pathlib import Path
 
 
@@ -19,10 +18,13 @@ def corrupt_data(input_path=None, output_path=None, seed=42):
         output_path = Path(output_path)
 
     rng = np.random.default_rng(seed)
-    random.seed(seed)
     df = pd.read_csv(input_path)
 
     num_rows = len(df)
+
+    # Allow string values to be injected into numeric columns.
+    corrupted_cols = ['temp', 'hum', 'windspeed', 'cnt']
+    df[corrupted_cols] = df[corrupted_cols].astype(object)
 
     # 1. Random missing values
     for col in ['temp', 'hum', 'windspeed']:
@@ -49,11 +51,11 @@ def corrupt_data(input_path=None, output_path=None, seed=42):
     df.loc[drop_indices, 'windspeed'] = None
 
     # 6. Duplicated rows
-    duplicated_rows = df.sample(3)
+    duplicated_rows = df.sample(3, random_state=seed)
     df = pd.concat([df, duplicated_rows], ignore_index=True)
 
     # Shuffle the rows
-    df = df.sample(frac=1).reset_index(drop=True)
+    df = df.sample(frac=1, random_state=seed).reset_index(drop=True)
 
     # Save the corrupted dataset
     df.to_csv(output_path, index=False)
