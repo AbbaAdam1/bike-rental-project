@@ -18,6 +18,7 @@ Using the [UCI Bike Sharing Dataset](https://archive.ics.uci.edu/ml/datasets/bik
 - `bike-rental.py`: Thin entrypoint that runs the pipeline.
 - `images/`: Saved figures.
 - `tests/test_pipeline.py`: Unit tests for core cleaning/feature logic.
+- `tests/test_produce_file.py`: Tests that corrupted-data generation is reproducible.
 
 ## Presentation
 - PPT: `presentation/bike_share_analysis.pptx`
