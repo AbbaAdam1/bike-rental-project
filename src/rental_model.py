@@ -139,18 +139,45 @@ def raw_feature_importance(
     return pd.Series(drops).sort_values(ascending=False)
 
 
-def plot_feature_importance(importance: pd.Series, output_dir: Path) -> None:
-    """Save a bar chart of permutation importance (drop in R2 when a feature is shuffled)."""
-    output_dir.mkdir(parents=True, exist_ok=True)
-    top = importance.iloc[::-1]
+FEATURE_LABELS = {
+    "temp": "Temperature",
+    "season": "Season",
+    "weathersit": "Weather (clear / mist / rain)",
+    "windspeed": "Wind speed",
+    "hum": "Humidity",
+    "holiday": "Holiday",
+    "workingday": "Working day",
+    "yr": "Year",
+}
 
-    plt.figure(figsize=(8, 6))
-    plt.barh(top.index, top.values, color="steelblue", alpha=0.8)
-    plt.xlabel("Drop in R² when feature is shuffled")
-    plt.title("What Drives Daily Rentals (Linear Model, Held-out Data)")
-    plt.tight_layout()
-    plt.savefig(output_dir / "feature_importance.png", dpi=300, bbox_inches="tight")
-    plt.close()
+
+def plot_feature_importance(importance: pd.Series, output_dir: Path) -> None:
+    """Save a bar chart of how much held-out R2 drops when each input is shuffled."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    # Smallest first so the biggest driver ends up on top; R2 shown in points out of 100.
+    points = (importance * 100).iloc[::-1]
+    labels = [FEATURE_LABELS.get(name, name) for name in points.index]
+
+    fig, ax = plt.subplots(figsize=(9, 5.5))
+    bars = ax.barh(labels, points.values, color="#2a78d6", height=0.6)
+    ax.bar_label(bars, labels=[f"{v:.0f}" if v >= 1 else "<1" for v in points.values], padding=4)
+
+    fig.text(0.01, 0.98, "Temperature drives daily bike rentals the most", fontsize=14, va="top")
+    fig.text(
+        0.01, 0.92,
+        "Points of prediction accuracy (R², out of 100) the model loses "
+        "when each factor is scrambled",
+        fontsize=10, color="#555555", va="top",
+    )
+    ax.set_xlabel("Accuracy lost (points)")
+    ax.set_xlim(0, points.max() * 1.12)
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.tick_params(axis="y", length=0)
+
+    # Leave room at the top for the title and subtitle.
+    fig.tight_layout(rect=(0, 0, 1, 0.86))
+    fig.savefig(output_dir / "feature_importance.png", dpi=300, bbox_inches="tight")
+    plt.close(fig)
 
 
 def report_results(results: ModelResults) -> None:
