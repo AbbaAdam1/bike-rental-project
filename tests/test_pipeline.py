@@ -1,8 +1,21 @@
+import importlib.util
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
 import pandas as pd
 
-from src.bike_rental_pipeline import clean_dataset, engineer_features
+from src.bike_rental_pipeline import clean_dataset, engineer_features, main
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+# produce-file.py has a hyphen in its name, so it can't be imported normally.
+_spec = importlib.util.spec_from_file_location(
+    "produce_file", PROJECT_ROOT / "script" / "produce-file.py"
+)
+produce_file = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(produce_file)
 
 
 class TestBikeRentalPipeline(unittest.TestCase):
@@ -79,6 +92,36 @@ class TestBikeRentalPipeline(unittest.TestCase):
 
         for col in ["day", "month", "year", "is_weekend", "temp_hum_interaction"]:
             self.assertIn(col, featured.columns)
+
+
+class TestPipelineEndToEnd(unittest.TestCase):
+    def test_main_writes_all_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            corrupted = Path(tmp) / "day_corrupted.csv"
+            output_dir = Path(tmp) / "out"
+            produce_file.corrupt_data(output_path=corrupted, seed=42)
+
+            main(["--input", str(corrupted), "--output-dir", str(output_dir)])
+
+            cleaned = pd.read_csv(output_dir / "day_cleaned.csv")
+            report = json.loads((output_dir / "quality_report.json").read_text())
+            self.assertEqual(report["final_rows"], len(cleaned))
+            self.assertFalse(cleaned[["temp", "hum", "windspeed", "cnt"]].isna().any().any())
+            for chart in [
+                "correlation_focused.png",
+                "rentals_vs_temp.png",
+                "rentals_by_season.png",
+                "rentals_by_weather.png",
+                "feature_importance.png",
+            ]:
+                self.assertTrue((output_dir / "images" / chart).exists(), chart)
+
+    def test_main_explains_how_to_create_missing_input(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(SystemExit) as ctx:
+                main(["--input", str(Path(tmp) / "missing.csv"), "--output-dir", tmp])
+
+        self.assertIn("produce-file.py", str(ctx.exception))
 
 
 if __name__ == "__main__":

@@ -8,7 +8,8 @@ A tested, reproducible Python data pipeline that takes a deliberately corrupted 
 - **Rule-based data repair:** converts unit-suffixed values (`32°C`, `10km/h`) to the dataset's normalized scale, range-checks normalized columns, removes duplicates, and rebuilds missing totals from their component columns instead of guessing.
 - **Order-aware cleaning:** invalid rows are dropped *before* median imputation so bad values can't skew the fill.
 - **Reproducible end to end:** corruption is seeded, so every run produces identical data, and a test verifies it.
-- **Tested and automated:** 11 unit tests cover each cleaning rule and the model; GitHub Actions runs them on Python 3.10 and 3.12 on every push and pull request.
+- **Tested and automated:** 13 unit tests, including an end-to-end run, cover each cleaning rule and the model; GitHub Actions runs them on Python 3.10 and 3.12 on every push and pull request.
+- **Pipeline conventions:** command-line options for every input and output, logging instead of prints, a JSON data-quality report on every run, and generated files kept out of git.
 - **Leakage-safe modeling:** component columns that sum to the target are excluded, and the model is evaluated on a later time period than it was trained on.
 
 **Tech stack:** Python, pandas, NumPy, scikit-learn, matplotlib, seaborn, unittest, GitHub Actions
@@ -19,8 +20,8 @@ A tested, reproducible Python data pipeline that takes a deliberately corrupted 
 - **A linear regression model explains 64% of the variation in daily rentals (R² 0.64)** on 6 months of data it never saw, with about 3× lower error than a simple baseline.
 
 <p>
-  <img src="images/feature_importance.png" alt="Feature importance: temperature dominates, followed by season and weather" width="49%">
-  <img src="images/rentals_vs_temp.png" alt="Daily rentals versus temperature by season, with the optimal temperature zone highlighted" width="49%">
+  <img src="docs/feature_importance.png" alt="Feature importance: temperature dominates, followed by season and weather" width="49%">
+  <img src="docs/rentals_vs_temp.png" alt="Daily rentals versus temperature by season, with the optimal temperature zone highlighted" width="49%">
 </p>
 
 ## Project Overview
@@ -34,12 +35,14 @@ A tested, reproducible Python data pipeline that takes a deliberately corrupted 
 5. Model daily rentals to measure how much each factor matters.
 
 ## Project Structure
-- `script/produce-file.py`: Generates `day_corrupted.csv` from `day.csv` deterministically.
+- `day.csv`: Clean source data from UCI.
+- `script/produce-file.py`: Generates a corrupted copy of `day.csv` deterministically.
 - `src/bike_rental_pipeline.py`: Core pipeline (cleaning, feature engineering, plotting).
 - `src/rental_model.py`: Rental-prediction models, evaluation, and feature importance.
 - `bike-rental.py`: Thin entrypoint that runs the pipeline.
-- `images/`: Saved figures.
-- `tests/test_pipeline.py`: Unit tests for core cleaning/feature logic.
+- `output/`: Everything the pipeline generates (not committed).
+- `docs/`: Chart snapshots shown in this README.
+- `tests/test_pipeline.py`: Unit tests for core cleaning/feature logic, plus an end-to-end run.
 - `tests/test_produce_file.py`: Tests that corrupted-data generation is reproducible.
 - `tests/test_rental_model.py`: Tests for the model's features, split, and fit.
 
@@ -66,10 +69,19 @@ python script/produce-file.py
 python bike-rental.py
 ```
 
+Both commands write to `output/` by default. Use `--help` on either to see the options, for example:
+
+```bash
+python script/produce-file.py --seed 7 --output my-run/day_corrupted.csv
+python bike-rental.py --input my-run/day_corrupted.csv --output-dir my-run
+```
+
 Outputs:
-- Cleaned dataset: `day_cleaned.csv`
-- Figures: `images/correlation_focused.png`, `images/rentals_vs_temp.png`, `images/rentals_by_season.png`, `images/rentals_by_weather.png`, `images/feature_importance.png`
-- Model metrics and top drivers printed to the console
+- `output/day_corrupted.csv`: Corrupted input
+- `output/day_cleaned.csv`: Cleaned dataset with engineered features
+- `output/quality_report.json`: Rows in and out, duplicates removed, values repaired and filled per column
+- `output/images/`: `correlation_focused.png`, `rentals_vs_temp.png`, `rentals_by_season.png`, `rentals_by_weather.png`, `feature_importance.png`
+- Model metrics and top drivers in the log output
 
 ## Modeling Results
 The model predicts daily rentals (`cnt`) from weather, season, and calendar features. `casual` and `registered` are excluded because they add up to `cnt`. It trains on days before 2012-07-01 and is tested on the 184 days after, so every score comes from days the model never saw.

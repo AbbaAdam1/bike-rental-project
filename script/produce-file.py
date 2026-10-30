@@ -1,21 +1,21 @@
-import pandas as pd
-import numpy as np
+import argparse
+import logging
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_INPUT_PATH = PROJECT_ROOT / "day.csv"
+DEFAULT_OUTPUT_PATH = PROJECT_ROOT / "output" / "day_corrupted.csv"
+
+logger = logging.getLogger(__name__)
 
 
 def corrupt_data(input_path=None, output_path=None, seed=42):
-    if input_path is None:
-        input_path = PROJECT_ROOT / "day.csv"
-    else:
-        input_path = Path(input_path)
-
-    if output_path is None:
-        output_path = PROJECT_ROOT / "day_corrupted.csv"
-    else:
-        output_path = Path(output_path)
+    input_path = Path(input_path) if input_path is not None else DEFAULT_INPUT_PATH
+    output_path = Path(output_path) if output_path is not None else DEFAULT_OUTPUT_PATH
 
     rng = np.random.default_rng(seed)
     df = pd.read_csv(input_path)
@@ -58,9 +58,31 @@ def corrupt_data(input_path=None, output_path=None, seed=42):
     df = df.sample(frac=1, random_state=seed).reset_index(drop=True)
 
     # Save the corrupted dataset
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(output_path, index=False)
-    print(f"[OK] Corrupted dataset saved to '{output_path}'")
+    logger.info("Corrupted dataset saved to %s", output_path)
+
+
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(
+        description="Create a deliberately corrupted copy of the bike-rental dataset."
+    )
+    parser.add_argument(
+        "--input", type=Path, default=DEFAULT_INPUT_PATH,
+        help="Clean source CSV (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--output", type=Path, default=DEFAULT_OUTPUT_PATH,
+        help="Where to write the corrupted CSV (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--seed", type=int, default=42,
+        help="Random seed; the same seed always produces the same file (default: %(default)s)",
+    )
+    return parser.parse_args(argv)
 
 
 if __name__ == "__main__":
-    corrupt_data()
+    args = parse_args()
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    corrupt_data(args.input, args.output, args.seed)
