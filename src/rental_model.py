@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -10,6 +11,8 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
+
+logger = logging.getLogger(__name__)
 
 RANDOM_SEED = 42
 DEFAULT_SPLIT_DATE = "2012-07-01"
@@ -151,12 +154,16 @@ def plot_feature_importance(importance: pd.Series, output_dir: Path) -> None:
 
 
 def report_results(results: ModelResults) -> None:
-    print(f"\nModel trained on {results.train_rows} days, tested on {results.test_rows} later days.")
-    print(results.metrics.round(3).to_string())
-    print("\nTop drivers (drop in R² when shuffled):")
-    print(results.permutation_importance.head(5).round(3).to_string())
+    logger.info(
+        "Model trained on %d days, tested on %d later days:\n%s",
+        results.train_rows, results.test_rows, results.metrics.round(3).to_string(),
+    )
+    logger.info(
+        "Top drivers (drop in R² when shuffled):\n%s",
+        results.permutation_importance.head(5).round(3).to_string(),
+    )
     if results.peak_temp is not None:
-        print(
-            f"\nLinear model predicts rentals peak at normalized temp {results.peak_temp:.2f}"
-            f" (~{results.peak_temp * TEMP_MAX_C:.0f}°C)."
+        logger.info(
+            "Linear model predicts rentals peak at normalized temp %.2f (~%.0f°C)",
+            results.peak_temp, results.peak_temp * TEMP_MAX_C,
         )

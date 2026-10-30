@@ -1,7 +1,15 @@
 from __future__ import annotations
 
+import argparse
+import json
+import logging
 from pathlib import Path
 from typing import Any
+
+import matplotlib
+
+# Charts are only saved to files, so use the non-interactive backend (works without a display).
+matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -11,9 +19,10 @@ from src.rental_model import plot_feature_importance, report_results, train_and_
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_INPUT_PATH = PROJECT_ROOT / "day_corrupted.csv"
-DEFAULT_OUTPUT_PATH = PROJECT_ROOT / "day_cleaned.csv"
-DEFAULT_IMAGE_DIR = PROJECT_ROOT / "images"
+DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "output"
+DEFAULT_INPUT_PATH = DEFAULT_OUTPUT_DIR / "day_corrupted.csv"
+
+logger = logging.getLogger(__name__)
 
 
 def standardize_column_names(df: pd.DataFrame) -> pd.DataFrame:
@@ -263,36 +272,60 @@ def create_plots(df: pd.DataFrame, output_dir: Path) -> None:
 
 
 def run_pipeline(
-    input_path: Path = DEFAULT_INPUT_PATH,
-    output_path: Path = DEFAULT_OUTPUT_PATH,
-    image_dir: Path = DEFAULT_IMAGE_DIR,
+    input_path: Path = DEFAULT_INPUT_PATH, output_dir: Path = DEFAULT_OUTPUT_DIR
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
-    """Execute the full clean + feature engineering + plotting pipeline."""
+    """Clean, engineer features, plot, and write the cleaned data and quality report."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     raw_df = pd.read_csv(input_path)
     cleaned_df, report = clean_dataset(raw_df)
     modeled_df = engineer_features(cleaned_df)
 
-    create_plots(modeled_df, image_dir)
-    modeled_df.to_csv(output_path, index=False)
+    create_plots(modeled_df, output_dir / "images")
+    modeled_df.to_csv(output_dir / "day_cleaned.csv", index=False)
+    (output_dir / "quality_report.json").write_text(json.dumps(report, indent=2))
     return modeled_df, report
 
 
-def main() -> None:
-    print("Running bike rental data pipeline...")
-    modeled_df, report = run_pipeline()
-    print(f"Rows before cleaning: {report['initial_rows']}")
-    print(f"Rows after cleaning: {report['final_rows']}")
-    print(f"Duplicates removed: {report['duplicates_removed']}")
-    print(f"Missing values filled by column: {report['missing_filled']}")
-    print(f"Corrupted tokens cleaned by column: {report['corrupted_tokens_cleaned']}")
-    print(f"Normalized-value rows dropped: {report['rows_dropped_normalized_out_of_range']}")
-    print(f"cnt rebuilt from casual + registered: {report['cnt_rebuilt_from_components']}")
-    print(f"cnt outliers clipped: {report['cnt_outliers_clipped']}")
-    print(f"Saved cleaned data to: {DEFAULT_OUTPUT_PATH}")
-    print(f"Saved charts to: {DEFAULT_IMAGE_DIR}")
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Clean the corrupted bike-rental dataset, plot it, and model daily rentals."
+    )
+    parser.add_argument(
+        "--input", type=Path, default=DEFAULT_INPUT_PATH,
+        help="Corrupted CSV to clean (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR,
+        help="Where to write the cleaned CSV, quality report, and charts (default: %(default)s)",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = parse_args(argv)
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    # matplotlib logs routine plotting details at INFO; keep the output to pipeline messages.
+    logging.getLogger("matplotlib").setLevel(logging.WARNING)
+
+    if not args.input.exists():
+        raise SystemExit(
+            f"Input file not found: {args.input}\n"
+            "Generate it first with: python script/produce-file.py"
+        )
+
+    logger.info("Cleaning %s", args.input)
+    modeled_df, report = run_pipeline(args.input, args.output_dir)
+    logger.info("Rows: %d before cleaning, %d after", report["initial_rows"], report["final_rows"])
+    logger.info("Duplicates removed: %d", report["duplicates_removed"])
+    logger.info("Missing values filled: %s", report["missing_filled"])
+    logger.info("Corrupted tokens cleaned: %s", report["corrupted_tokens_cleaned"])
+    logger.info("Out-of-range rows dropped: %s", report["rows_dropped_normalized_out_of_range"])
+    logger.info("cnt rebuilt from casual + registered: %d", report["cnt_rebuilt_from_components"])
+    logger.info("Wrote cleaned data, quality report, and charts to %s", args.output_dir)
 
     results = train_and_evaluate(modeled_df)
-    plot_feature_importance(results.permutation_importance, DEFAULT_IMAGE_DIR)
+    plot_feature_importance(results.permutation_importance, args.output_dir / "images")
     report_results(results)
 
 
