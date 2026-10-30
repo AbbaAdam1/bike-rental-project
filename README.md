@@ -1,9 +1,15 @@
-# Optimizing Bike Share Operations Through Data Analytics
+# Bike Rental Data Pipeline
 
 [![Tests](https://github.com/AbbaAdam1/bike-rental-project/actions/workflows/tests.yml/badge.svg)](https://github.com/AbbaAdam1/bike-rental-project/actions/workflows/tests.yml)
 
-This project explores how weather, seasonality, and demand patterns impact daily bike rentals.
-Using the [UCI Bike Sharing Dataset](https://archive.ics.uci.edu/ml/datasets/bike+sharing+dataset), the workflow covers data corruption simulation, cleaning, feature engineering, modeling, and visualization to support bike-share operational decisions.
+A tested, reproducible Python data pipeline that takes a deliberately corrupted copy of the [UCI Bike Sharing Dataset](https://archive.ics.uci.edu/ml/datasets/bike+sharing+dataset), repairs it with rule-based validation, and models what drives daily bike rentals.
+
+## Engineering Highlights
+- **Rule-based data repair:** converts unit-suffixed values (`32°C`, `10km/h`) to the dataset's normalized scale, range-checks normalized columns, removes duplicates, and rebuilds missing totals from their component columns instead of guessing.
+- **Order-aware cleaning:** invalid rows are dropped *before* median imputation so bad values can't skew the fill.
+- **Reproducible end to end:** corruption is seeded, so every run produces identical data, and a test verifies it.
+- **Tested and automated:** 11 unit tests cover each cleaning rule and the model; GitHub Actions runs them on Python 3.10 and 3.12 on every push and pull request.
+- **Leakage-safe modeling:** component columns that sum to the target are excluded, and the model is evaluated on a later time period than it was trained on.
 
 **Tech stack:** Python, pandas, NumPy, scikit-learn, matplotlib, seaborn, unittest, GitHub Actions
 
@@ -36,10 +42,6 @@ Using the [UCI Bike Sharing Dataset](https://archive.ics.uci.edu/ml/datasets/bik
 - `tests/test_pipeline.py`: Unit tests for core cleaning/feature logic.
 - `tests/test_produce_file.py`: Tests that corrupted-data generation is reproducible.
 - `tests/test_rental_model.py`: Tests for the model's features, split, and fit.
-
-## Presentation
-- PPT: `presentation/bike_share_analysis.pptx`
-- PDF: `presentation/bike_share_analysis.pdf`
 
 ## Requirements
 - Python 3.10+
