@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
+from src.rental_model import plot_feature_importance, report_results, train_and_evaluate
+
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_INPUT_PATH = PROJECT_ROOT / "day_corrupted.csv"
@@ -277,7 +279,7 @@ def run_pipeline(
 
 def main() -> None:
     print("Running bike rental data pipeline...")
-    _, report = run_pipeline()
+    modeled_df, report = run_pipeline()
     print(f"Rows before cleaning: {report['initial_rows']}")
     print(f"Rows after cleaning: {report['final_rows']}")
     print(f"Duplicates removed: {report['duplicates_removed']}")
@@ -288,6 +290,10 @@ def main() -> None:
     print(f"cnt outliers clipped: {report['cnt_outliers_clipped']}")
     print(f"Saved cleaned data to: {DEFAULT_OUTPUT_PATH}")
     print(f"Saved charts to: {DEFAULT_IMAGE_DIR}")
+
+    results = train_and_evaluate(modeled_df)
+    plot_feature_importance(results.permutation_importance, DEFAULT_IMAGE_DIR)
+    report_results(results)
 
 
 if __name__ == "__main__":
