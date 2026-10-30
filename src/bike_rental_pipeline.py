@@ -59,6 +59,11 @@ UNIT_DIVISORS = {
 
 NORMALIZED_COLUMNS = ["temp", "atemp", "hum", "windspeed"]
 
+# UCI season codes; 1 starts at the winter solstice, so January is season 1.
+SEASON_NAMES = {1: "Winter", 2: "Spring", 3: "Summer", 4: "Fall"}
+# Distinct hues checked for colorblind separation; one color per season.
+SEASON_COLORS = {"Winter": "#2a78d6", "Spring": "#1baf7a", "Summer": "#eb6834", "Fall": "#4a3aa7"}
+
 
 def _clean_numeric_series(
     series: pd.Series, unit_divisors: dict[str, float] | None = None
@@ -236,16 +241,34 @@ def create_plots(df: pd.DataFrame, output_dir: Path) -> None:
 
     if {"temp", "cnt", "season"}.issubset(df.columns):
         plt.figure(figsize=(10, 6))
-        sns.scatterplot(x="temp", y="cnt", hue="season", data=df, alpha=0.7, s=60)
+        # Neutral band and lines so only the seasons carry color.
+        plt.axvspan(0.5, 0.7, color="#e6e6e6", zorder=0, label="Goldilocks Zone")
+        plt.axvline(x=0.5, color="#555555", linestyle="--", linewidth=1.5, zorder=1)
+        plt.axvline(x=0.7, color="#555555", linestyle="--", linewidth=1.5, zorder=1)
 
-        plt.axvline(x=0.5, color="red", linestyle="--", alpha=0.8, linewidth=2)
-        plt.axvline(x=0.7, color="red", linestyle="--", alpha=0.8, linewidth=2)
-        plt.axvspan(0.5, 0.7, alpha=0.2, color="green", label="Goldilocks Zone")
+        sns.scatterplot(
+            x=df["temp"],
+            y=df["cnt"],
+            hue=df["season"].map(SEASON_NAMES),
+            hue_order=list(SEASON_COLORS),
+            palette=SEASON_COLORS,
+            alpha=0.75,
+            s=60,
+            edgecolor="white",
+            linewidth=0.5,
+            zorder=2,
+        )
 
         plt.title("Bike Rentals vs. Temperature by Season\n(Optimal Zone: 0.5-0.7 Normalized Temp)")
         plt.xlabel("Normalized Temperature (0-1 scale)")
         plt.ylabel("Daily Rental Count")
-        plt.legend(title="Season", bbox_to_anchor=(1.05, 1), loc="upper left")
+        # List the seasons first and the shaded zone last.
+        handles, labels = plt.gca().get_legend_handles_labels()
+        order = [labels.index(name) for name in SEASON_COLORS] + [labels.index("Goldilocks Zone")]
+        plt.legend(
+            [handles[i] for i in order], [labels[i] for i in order],
+            title="Season", bbox_to_anchor=(1.05, 1), loc="upper left",
+        )
         plt.tight_layout()
         plt.savefig(output_dir / "rentals_vs_temp.png", dpi=300, bbox_inches="tight")
         plt.close()
