@@ -40,6 +40,39 @@ class TestBikeRentalPipeline(unittest.TestCase):
             self.assertTrue(pd.api.types.is_numeric_dtype(cleaned[col]))
             self.assertFalse(cleaned[col].isna().any())
 
+    def test_unit_suffixed_values_are_converted_to_normalized_scale(self) -> None:
+        cleaned, _ = clean_dataset(self.sample)
+        jan_1 = cleaned.loc[cleaned["dteday"] == "2011-01-01"].iloc[0]
+        jan_3 = cleaned.loc[cleaned["dteday"] == "2011-01-03"].iloc[0]
+
+        self.assertAlmostEqual(jan_1["temp"], 32 / 41)
+        self.assertAlmostEqual(jan_3["windspeed"], 10 / 67)
+
+    def test_normalized_columns_stay_in_range(self) -> None:
+        cleaned, _ = clean_dataset(self.sample)
+
+        for col in ["temp", "atemp", "hum", "windspeed"]:
+            self.assertTrue(cleaned[col].between(0, 1).all(), col)
+
+    def test_missing_cnt_rebuilt_from_casual_and_registered(self) -> None:
+        cleaned, report = clean_dataset(self.sample)
+        jan_1 = cleaned.loc[cleaned["dteday"] == "2011-01-01"].iloc[0]
+
+        self.assertEqual(jan_1["cnt"], 120 + 450)
+        self.assertEqual(report["cnt_rebuilt_from_components"], 1)
+
+    def test_out_of_range_values_do_not_skew_fill_median(self) -> None:
+        sample = self.sample.copy()
+        sample["humidity"] = ["0.4", "0.6", None, None]
+        sample.loc[len(sample)] = sample.iloc[0]
+        sample.loc[len(sample) - 1, ["date_of_record", "humidity"]] = ["2011-01-04", "9.0"]
+
+        cleaned, report = clean_dataset(sample)
+        jan_2 = cleaned.loc[cleaned["dteday"] == "2011-01-02"].iloc[0]
+
+        self.assertEqual(report["rows_dropped_normalized_out_of_range"]["hum"], 1)
+        self.assertAlmostEqual(jan_2["hum"], 0.5)
+
     def test_engineer_features_adds_expected_columns(self) -> None:
         cleaned, _ = clean_dataset(self.sample)
         featured = engineer_features(cleaned)

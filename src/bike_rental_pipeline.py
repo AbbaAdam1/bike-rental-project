@@ -38,20 +38,40 @@ def standardize_column_names(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def _clean_numeric_series(series: pd.Series) -> tuple[pd.Series, int]:
-    """Strip known bad tokens and coerce values to numeric."""
-    series_as_str = series.fillna("None").astype(str)
-    corrupted_pattern = r"high|low|none|°C|C|%|km/h"
-    corrupted_count = series_as_str.str.contains(
-        corrupted_pattern, case=False, na=False
-    ).sum()
+# Divisors that map raw units onto the UCI dataset's normalized 0-1 scale.
+# temp = C / 41, hum = % / 100, windspeed = km/h / 67 (per the UCI readme).
+UNIT_DIVISORS = {
+    "temp": {"°C": 41.0, "C": 41.0},
+    "hum": {"%": 100.0},
+    "windspeed": {"km/h": 67.0},
+}
 
-    cleaned = (
-        series_as_str.str.replace(r"°C|C|%|km/h|high|low|None", "", regex=True)
-        .str.strip()
-        .replace("", pd.NA)
-    )
-    return pd.to_numeric(cleaned, errors="coerce"), int(corrupted_count)
+NORMALIZED_COLUMNS = ["temp", "atemp", "hum", "windspeed"]
+
+
+def _clean_numeric_series(
+    series: pd.Series, unit_divisors: dict[str, float] | None = None
+) -> tuple[pd.Series, int]:
+    """Coerce values to numeric, converting unit-suffixed values to the normalized scale.
+
+    Values that cannot be parsed (e.g. "high", "low") become NaN.
+    """
+    unit_divisors = unit_divisors or {}
+    series_as_str = series.astype("string").str.strip()
+    numeric = pd.to_numeric(series_as_str, errors="coerce")
+
+    # Anything present but not plain-numeric counts as a corrupted token.
+    corrupted_mask = series_as_str.notna() & numeric.isna()
+
+    # Longest suffix first so "°C" is matched before "C".
+    for unit in sorted(unit_divisors, key=len, reverse=True):
+        has_unit = corrupted_mask & numeric.isna() & series_as_str.str.endswith(unit)
+        values = pd.to_numeric(
+            series_as_str[has_unit].str[: -len(unit)].str.strip(), errors="coerce"
+        )
+        numeric.loc[has_unit] = values / unit_divisors[unit]
+
+    return numeric.astype(float), int(corrupted_mask.sum())
 
 
 def clean_dataset(raw_df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, Any]]:
@@ -63,6 +83,7 @@ def clean_dataset(raw_df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, Any]]:
         "rows_dropped_invalid_dates": 0,
         "rows_dropped_normalized_out_of_range": {},
         "corrupted_tokens_cleaned": {},
+        "cnt_rebuilt_from_components": 0,
         "missing_filled": {},
         "cnt_outliers_clipped": 0,
         "final_rows": 0,
@@ -82,8 +103,25 @@ def clean_dataset(raw_df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, Any]]:
     numeric_to_clean = ["temp", "hum", "windspeed", "cnt"]
     for col in numeric_to_clean:
         if col in df.columns:
-            df[col], cleaned_count = _clean_numeric_series(df[col])
+            df[col], cleaned_count = _clean_numeric_series(
+                df[col], UNIT_DIVISORS.get(col)
+            )
             report["corrupted_tokens_cleaned"][col] = cleaned_count
+
+    # Drop out-of-range rows before filling, so bad values don't skew the medians.
+    for col in NORMALIZED_COLUMNS:
+        if col in df.columns:
+            invalid_mask = (df[col] < 0) | (df[col] > 1)
+            dropped = int(invalid_mask.sum())
+            if dropped:
+                df = df.loc[~invalid_mask].copy()
+            report["rows_dropped_normalized_out_of_range"][col] = dropped
+
+    # cnt is defined as casual + registered, so rebuild it exactly where possible.
+    if {"cnt", "casual", "registered"}.issubset(df.columns):
+        rebuildable = df["cnt"].isna() & df["casual"].notna() & df["registered"].notna()
+        df.loc[rebuildable, "cnt"] = df.loc[rebuildable, "casual"] + df.loc[rebuildable, "registered"]
+        report["cnt_rebuilt_from_components"] = int(rebuildable.sum())
 
     numeric_fill = ["temp", "atemp", "hum", "windspeed", "casual", "registered", "cnt"]
     for col in numeric_fill:
@@ -106,14 +144,6 @@ def clean_dataset(raw_df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, Any]]:
         if col in df.columns:
             if df[col].isna().any():
                 df[col] = df[col].fillna(df[col].mode().iloc[0])
-
-    for col in ["temp", "atemp", "hum"]:
-        if col in df.columns:
-            invalid_mask = (df[col] < 0) | (df[col] > 1)
-            dropped = int(invalid_mask.sum())
-            if dropped:
-                df = df.loc[~invalid_mask].copy()
-            report["rows_dropped_normalized_out_of_range"][col] = dropped
 
     if "cnt" in df.columns:
         outliers = int(((df["cnt"] < 0) | (df["cnt"] > 10000)).sum())
@@ -254,6 +284,7 @@ def main() -> None:
     print(f"Missing values filled by column: {report['missing_filled']}")
     print(f"Corrupted tokens cleaned by column: {report['corrupted_tokens_cleaned']}")
     print(f"Normalized-value rows dropped: {report['rows_dropped_normalized_out_of_range']}")
+    print(f"cnt rebuilt from casual + registered: {report['cnt_rebuilt_from_components']}")
     print(f"cnt outliers clipped: {report['cnt_outliers_clipped']}")
     print(f"Saved cleaned data to: {DEFAULT_OUTPUT_PATH}")
     print(f"Saved charts to: {DEFAULT_IMAGE_DIR}")
